@@ -5,6 +5,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { jwtDecode } from "jwt-decode";
 
 import { createContext, ReactNode, useContext, useEffect, useState } from "react";
+import { connectSocket, disconnectSocket } from "@/sockets/socket";
 
 export const AuthContext = createContext<AuthContextProps>({
   token: null,
@@ -40,6 +41,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // user is logged in
         setToken(storedToken);
         setUser(decoded.user);
+        await connectSocket()
 
         gotoHomePage();
       } catch (error) {
@@ -79,6 +81,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signIn = async (email: string, password: string) => {
     const response = await login(email, password);
     await updateToken(response.token);
+    await connectSocket();
     router.replace("/(main)/home");
   };
 
@@ -92,6 +95,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     console.log(response);
 
     await updateToken(response.token);
+    await connectSocket();
+
     router.replace("/(main)/home");
   };
 
@@ -99,6 +104,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setToken(null);
     setUser(null);
     await AsyncStorage.removeItem("token");
+    disconnectSocket()
     router.replace("/(auth)/welcome");
   };
 

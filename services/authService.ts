@@ -12,7 +12,7 @@ export const login = async (
             password
         });
 
-        return response.data;
+        return { token: response.data.token };
     } catch (error: any) {
         console.log('got error',error);
         const msg = error?.response?.data?.msg || 'Login failed';
@@ -34,7 +34,7 @@ export const register = async (
             avatar
         });
 
-        return response.data;
+        return { token: response.data.token };
     } catch (error: any) {
         console.log('got error',error);
         const msg = error?.response?.data?.msg || 'Registration failed';
