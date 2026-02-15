@@ -22,6 +22,8 @@ import { UserDataProps } from "@/types";
 import Button from "@/components/Button";
 import { useRouter } from "expo-router";
 import { updateProfile } from "@/sockets/socketEvents";
+import * as ImagePicker from "expo-image-picker";
+import { uploadFileToCloudinary } from "@/services/imageService";
 
 const ProfileModal = () => {
   const { user, signOut, updateToken } = useAuth();
@@ -38,7 +40,7 @@ const ProfileModal = () => {
     updateProfile(processUpdateProfile);
 
     return () => {
-      updateProfile(processUpdateProfile);
+      updateProfile(processUpdateProfile, true);
     };
   }, []);
 
@@ -62,7 +64,7 @@ const ProfileModal = () => {
     });
   }, [user]);
 
-  const onSubmit = () => {
+  const onSubmit = async() => {
     let { name, avatar } = userData;
 
     if (!name.trim()) {
@@ -74,6 +76,21 @@ const ProfileModal = () => {
       name,
       avatar,
     };
+
+    if(avatar && avatar?.uri){
+      setLoading(true);
+      const res = await uploadFileToCloudinary(avatar,"profiles")
+      console.log("result:",res);
+      if(res.success){
+        data.avatar = res.data;
+      }else{
+        Alert.alert("User",res.msg);
+        setLoading(false)
+        return
+      }
+      
+    }
+    
     setLoading(true);
 
     updateProfile(data);
@@ -99,6 +116,19 @@ const ProfileModal = () => {
     ]);
   };
 
+  const onPickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      // allowsEditing:true,
+      aspect: [4, 3],
+      quality: 0.5,
+    });
+
+    if(!result.canceled){
+      setUserData({...userData,avatar: result.assets[0]})
+    }
+  };
+
   return (
     <ScreenWrapper isModal={true}>
       <View style={styles.container}>
@@ -109,83 +139,86 @@ const ProfileModal = () => {
           }
           style={{ marginVertical: spacingY._15 }}
         />
-      </View>
 
-      {/* form */}
-      <ScrollView contentContainerStyle={styles.form}>
-        <View style={styles.container}>
-          <Avatar uri={null} size={170} />
+        {/* form */}
+        <ScrollView contentContainerStyle={styles.form}>
+          <View style={styles.avatarContainer}>
+            <Avatar uri={userData.avatar} size={170} />
 
-          <TouchableOpacity style={styles.editIcon}>
-            <Icons.Pencil size={verticalScale(20)} color={colors.neutral800} />
-          </TouchableOpacity>
-        </View>
-
-        <View style={{ gap: spacingY._20 }}>
-          <View style={styles.inputContainer}>
-            <Typo style={{ paddingLeft: spacingX._10 }}>Email</Typo>
-
-            <Input
-              value={userData.email}
-              containerStyle={{
-                borderColor: colors.neutral350,
-                paddingLeft: spacingX._20,
-                backgroundColor: colors.neutral300,
-              }}
-              onChangeText={(value) =>
-                setUserData({ ...userData, email: value })
-              }
-              editable={false}
-            />
+            <TouchableOpacity style={styles.editIcon} onPress={onPickImage}>
+              <Icons.Pencil
+                size={verticalScale(20)}
+                color={colors.neutral800}
+              />
+            </TouchableOpacity>
           </View>
-          <View style={styles.inputContainer}>
-            <Typo style={{ paddingLeft: spacingX._10 }}>Name</Typo>
 
-            <Input
-              value={userData.name}
-              containerStyle={{
-                borderColor: colors.neutral350,
-                paddingLeft: spacingX._20,
-                // backgroundColor:colors.neutral300
-              }}
-              onChangeText={(value) =>
-                setUserData({ ...userData, name: value })
-              }
-              // editable={false}
-            />
+          <View style={{ gap: spacingY._20 }}>
+            <View style={styles.inputContainer}>
+              <Typo style={{ paddingLeft: spacingX._10 }}>Email</Typo>
+
+              <Input
+                value={userData.email}
+                containerStyle={{
+                  borderColor: colors.neutral350,
+                  paddingLeft: spacingX._20,
+                  backgroundColor: colors.neutral300,
+                }}
+                onChangeText={(value) =>
+                  setUserData({ ...userData, email: value })
+                }
+                editable={false}
+              />
+            </View>
+            <View style={styles.inputContainer}>
+              <Typo style={{ paddingLeft: spacingX._10 }}>Name</Typo>
+
+              <Input
+                value={userData.name}
+                containerStyle={{
+                  borderColor: colors.neutral350,
+                  paddingLeft: spacingX._20,
+                  // backgroundColor:colors.neutral300
+                }}
+                onChangeText={(value) =>
+                  setUserData({ ...userData, name: value })
+                }
+                // editable={false}
+              />
+            </View>
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
 
-      <View style={styles.footer}>
-        {!loading && (
+        <View style={styles.footer}>
+          {!loading && (
+            <Button
+              style={{
+                backgroundColor: colors.rose,
+                height: verticalScale(56),
+                width: verticalScale(56),
+              }}
+              onPress={showLogOutAlert}
+            >
+              <Icons.SignOut
+                size={verticalScale(30)}
+                color={colors.white}
+                weight="bold"
+              />
+            </Button>
+          )}
+
           <Button
             style={{
-              backgroundColor: colors.rose,
-              height: verticalScale(56),
-              width: verticalScale(56),
+              flex: 1,
             }}
-            onPress={showLogOutAlert}
+            onPress={onSubmit}
+            loading={loading}
           >
-            <Icons.SignOut
-              size={verticalScale(30)}
-              color={colors.white}
-              weight="bold"
-            />
+            <Typo color={colors.black} fontWeight={"700"}>
+              Update
+            </Typo>
           </Button>
-        )}
-
-        <Button
-          style={{
-            flex: 1,
-          }}
-          onPress={onSubmit}
-          loading={loading}
-        >
-          <Typo color={colors.black} fontWeight={"700"}>
-            Update
-          </Typo>
-        </Button>
+        </View>
       </View>
     </ScreenWrapper>
   );
@@ -225,6 +258,7 @@ const styles = StyleSheet.create({
   form: {
     gap: spacingY._30,
     marginTop: spacingY._15,
+    paddingHorizontal: spacingY._10,
   },
   footer: {
     alignItems: "center",
