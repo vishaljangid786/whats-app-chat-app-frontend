@@ -1,18 +1,30 @@
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import React, { useEffect } from "react";
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import React, { useEffect, useState } from "react";
 import ScreenWrapper from "@/components/ScreenWrapper";
 import Typo from "@/components/Typo";
 import { colors, radius, spacingX, spacingY } from "@/constants/theme";
 import Button from "@/components/Button";
 import { useAuth } from "@/context/authContext";
-import { testSocket } from "@/sockets/socketEvents";
+import { getConversations, testSocket } from "@/sockets/socketEvents";
 import { verticalScale } from "@/utils/styling";
 import * as Icons from "phosphor-react-native";
 import { useRouter } from "expo-router";
+import ConversationItem from "@/components/ConversationItem";
+import Loading from "@/components/Loading";
+import { ConversationProps, ResponseProps } from "@/types";
 
 const home = () => {
   const { user: currentUser, signOut } = useAuth();
-  const router = useRouter()
+  const router = useRouter();
+  const [selectedTab, setSelectedTab] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [conversations,setConversations] = useState<ConversationProps[]>([])
 
   useEffect(() => {
     testSocket(testSocketCallbackHandler);
@@ -23,6 +35,21 @@ const home = () => {
     };
   }, []);
 
+  const processConversations =(res:ResponseProps)=>{
+    // console.log("res:",res);
+    
+    if(res.success){
+      setConversations(res.data)
+    }
+  }
+  useEffect(() => {
+    getConversations(processConversations)
+    getConversations(null)
+    return () => {
+      getConversations(processConversations, true);
+    };
+  }, []);
+
   const testSocketCallbackHandler = (data: any) => {
     console.log("got response from testSocket event:", data);
   };
@@ -30,6 +57,61 @@ const home = () => {
   const handleLogout = async () => {
     await signOut();
   };
+
+  // const conversations = [
+  //   {
+  //     name: "Alice",
+  //     type: "direct",
+  //     lastMessage: {
+  //       senderName: "Alice",
+  //       content: "hery",
+  //       createdAt: "2025-06-21T18:45:00Z",
+  //     },
+  //   },
+  //   {
+  //     name: "team project",
+  //     type: "group",
+  //     lastMessage: {
+  //       senderName: "Alice",
+  //       content: "her naoe lay",
+  //       createdAt: "2026-02-15T14:10:00Z",
+  //     },
+  //   },
+  //   {
+  //     name: "my project",
+  //     type: "direct",
+  //     lastMessage: {
+  //       senderName: "Alice",
+  //       content: "hery",
+  //       createdAt: "2025-06-21T18:45:00Z",
+  //     },
+  //   },
+  //   {
+  //     name: "Alice",
+  //     type: "group",
+  //     lastMessage: {
+  //       senderName: "Alice",
+  //       content: "hery",
+  //       createdAt: "2025-06-21T18:45:00Z",
+  //     },
+  //   },
+  // ];
+
+  const directConversations = conversations
+    .filter((item: ConversationProps) => item.type == "direct")
+    .sort((a: ConversationProps, b: ConversationProps) => {
+      const aDate = a?.lastMessage?.createdAt || a.createdAt;
+      const bDate = b?.lastMessage?.createdAt || b.createdAt;
+      return new Date(bDate).getTime() - new Date(aDate).getTime();
+    });
+
+  const groupConversations = conversations
+    .filter((item: ConversationProps) => item.type == "group")
+    .sort((a: ConversationProps, b: ConversationProps) => {
+      const aDate = a?.lastMessage?.createdAt || a.createdAt;
+      const bDate = b?.lastMessage?.createdAt || b.createdAt;
+      return new Date(bDate).getTime() - new Date(aDate).getTime();
+    });
 
   return (
     <ScreenWrapper bgOpacity={0.4} showPattern={true}>
@@ -49,7 +131,12 @@ const home = () => {
             </Typo>
           </View>
 
-          <TouchableOpacity style={styles.settingIcon} onPress={() => {router.push('/(main)/profileModal')}}>
+          <TouchableOpacity
+            style={styles.settingIcon}
+            onPress={() => {
+              router.push("/(main)/profileModal");
+            }}
+          >
             <Icons.GearSix
               color={colors.white}
               weight="fill"
@@ -58,8 +145,88 @@ const home = () => {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.content}></View>
+        <View style={styles.content}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingVertical: spacingY._20 }}
+          >
+            <View style={styles.navBar}>
+              <View style={styles.tabs}>
+                <TouchableOpacity
+                  onPress={() => setSelectedTab(0)}
+                  style={[
+                    styles.tabStyle,
+                    selectedTab === 0 && styles.activeTabStyle,
+                  ]}
+                >
+                  <Typo>Direct Messages</Typo>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setSelectedTab(1)}
+                  style={[
+                    styles.tabStyle,
+                    selectedTab === 1 && styles.activeTabStyle,
+                  ]}
+                >
+                  <Typo>Groups</Typo>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.conversationList}>
+              {selectedTab == 0 &&
+                directConversations.map((item: ConversationProps, index) => {
+                  return (
+                    <ConversationItem
+                      item={item}
+                      key={index}
+                      router={router}
+                      showDivider={directConversations.length != index + 1}
+                    />
+                  );
+                })}
+              {selectedTab == 1 &&
+                groupConversations.map((item: ConversationProps, index) => {
+                  return (
+                    <ConversationItem
+                      item={item}
+                      key={index}
+                      router={router}
+                      showDivider={groupConversations.length != index + 1}
+                    />
+                  );
+                })}
+            </View>
+            {!loading &&
+              selectedTab == 0 &&
+              directConversations.length ==
+                0 && (
+                  <Typo style={{ textAlign: "center" }}>
+                    You don't have any messages
+                  </Typo>
+                )}
+            {!loading &&
+              selectedTab == 1 &&
+              groupConversations.length ==
+                0 && (
+                  <Typo style={{ textAlign: "center" }}>
+                    You haven't joined any groups yet
+                  </Typo>
+                )
+              }
+
+            {loading && <Loading />}
+          </ScrollView>
+        </View>
       </View>
+
+
+      <Button style={styles.floatingButton} onPress={()=>router.push({
+        pathname:'/(main)/newConversationModal',
+        params:{isGroup:selectedTab}
+      })}>
+        <Icons.Plus color={colors.black} weight="bold" size={verticalScale(24)} />
+      </Button>
     </ScreenWrapper>
   );
 };
@@ -78,38 +245,38 @@ const styles = StyleSheet.create({
     gap: spacingY._15,
     paddingVertical: spacingY._20,
   },
-  row:{
-    flexDirection:'row',
-    alignItems:"center",
-    justifyContent:"space-between",          
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
-  content:{
-    flex:1,
-    backgroundColor:colors.white,
-    borderTopLeftRadius:radius._50,
-    borderTopRightRadius:radius._50,
-    borderCurve:'continuous',
-    overflow:'hidden',
-    paddingHorizontal:spacingX._20
+  content: {
+    flex: 1,
+    backgroundColor: colors.white,
+    borderTopLeftRadius: radius._50,
+    borderTopRightRadius: radius._50,
+    borderCurve: "continuous",
+    overflow: "hidden",
+    paddingHorizontal: spacingX._20,
   },
   navBar: {
-    flexDirection:'row',
-    gap:spacingX._15,
-    alignItems:'center',
-    paddingHorizontal:spacingX._10
+    flexDirection: "row",
+    gap: spacingX._15,
+    alignItems: "center",
+    paddingHorizontal: spacingX._10,
   },
-  tabs:{
-    flexDirection:'row',
-    gap:spacingX._10,
-    flex:1,
-    justifyContent:'center',
-    alignItems:'center',
+  tabs: {
+    flexDirection: "row",
+    gap: spacingX._10,
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  tabStyle:{
-    paddingVertical:spacingY._10,
-    paddingHorizontal:spacingX._20,
-    borderRadius:radius.full,
-    backgroundColor:colors.neutral100
+  tabStyle: {
+    paddingVertical: spacingY._10,
+    paddingHorizontal: spacingX._20,
+    borderRadius: radius.full,
+    backgroundColor: colors.neutral100,
   },
   activeTabStyle: {
     backgroundColor: colors.primaryLight,
@@ -119,7 +286,7 @@ const styles = StyleSheet.create({
   },
   settingIcon: {
     padding: spacingY._10,
-    borderRadius:radius.full,
+    borderRadius: radius.full,
     backgroundColor: colors.neutral700,
   },
   floatingButton: {

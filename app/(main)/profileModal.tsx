@@ -24,6 +24,7 @@ import { useRouter } from "expo-router";
 import { updateProfile } from "@/sockets/socketEvents";
 import * as ImagePicker from "expo-image-picker";
 import { uploadFileToCloudinary } from "@/services/imageService";
+import { showAlert } from "@/utils/globalAlert";
 
 const ProfileModal = () => {
   const { user, signOut, updateToken } = useAuth();
@@ -80,7 +81,7 @@ const ProfileModal = () => {
     if(avatar && avatar?.uri){
       setLoading(true);
       const res = await uploadFileToCloudinary(avatar,"profiles")
-      console.log("result:",res);
+      // console.log("result:",res);
       if(res.success){
         data.avatar = res.data;
       }else{
@@ -101,20 +102,31 @@ const ProfileModal = () => {
     await signOut();
   };
 
-  const showLogOutAlert = () => {
-    Alert.alert("Confirm", "Are you want to logout ?", [
-      {
-        text: "Cancel",
-        onPress: () => console.log("cancel Logout"),
-        style: "cancel",
-      },
-      {
-        text: "Logout",
-        onPress: () => handleLogout(),
-        style: "destructive",
-      },
-    ]);
-  };
+const showLogOutAlert = () => {
+  if (Platform.OS === "web") {
+    const confirmLogout = window.confirm("Are you sure you want to logout?");
+    if (confirmLogout) {
+      handleLogout();
+    }
+  } else {
+    // Alert.alert("Confirm", "Are you sure you want to logout?", [
+    //   {
+    //     text: "Cancel",
+    //     style: "cancel",
+    //   },
+    //   {
+    //     text: "Logout",
+    //     onPress: handleLogout,
+    //     style: "destructive",
+    //   },
+    // ]);
+    showAlert({
+      title:'Logout',
+      message:"Are You Sure to Logout",
+      onConfirm:()=>signOut()
+    })
+  }
+};
 
   const onPickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
