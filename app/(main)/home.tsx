@@ -11,7 +11,12 @@ import Typo from "@/components/Typo";
 import { colors, radius, spacingX, spacingY } from "@/constants/theme";
 import Button from "@/components/Button";
 import { useAuth } from "@/context/authContext";
-import { getConversations, testSocket } from "@/sockets/socketEvents";
+import {
+  getConversations,
+  newConversation,
+  newMessage,
+  testSocket,
+} from "@/sockets/socketEvents";
 import { verticalScale } from "@/utils/styling";
 import * as Icons from "phosphor-react-native";
 import { useRouter } from "expo-router";
@@ -42,13 +47,29 @@ const home = () => {
   useEffect(() => {
     getConversations(processConversations);
 
-    getConversations(newConversationHandler);
+    newConversation(newConversationHandler);
+    newMessage(newMessageHandler);
+
     getConversations(null);
     return () => {
       getConversations(processConversations, true);
-      getConversations(newConversationHandler, true);
+      newConversation(newConversationHandler, true);
+      newMessage(newMessageHandler, true);
     };
   }, []);
+
+  const newMessageHandler = (res: ResponseProps) => {
+    if (res.success) {
+      let conversationId = res.data.conversationId;
+      setConversations((prev) => {
+        let updatedConversation = prev.map((item) => {
+          if (item._id == conversationId) item.lastMessage == res.data;
+          return item;
+        });
+        return updatedConversation;
+      });
+    }
+  };
 
   const handleLogout = async () => {
     await signOut();

@@ -124,7 +124,7 @@ export type ConversationProps = {
     content: string;
     senderId: string;
     type: "text" | "image" | "file";
-    attachment?: string;
+    attachement?: string;
     createdAt: string;
   };
   createdAt: string;

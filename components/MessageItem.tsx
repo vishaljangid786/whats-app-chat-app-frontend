@@ -7,6 +7,7 @@ import { colors, radius, spacingX, spacingY } from "@/constants/theme";
 import Avatar from "./Avatar";
 import Typo from "./Typo";
 import moment from "moment";
+import { Image } from "expo-image";
 
 const MessageItem = ({
   item,
@@ -30,7 +31,11 @@ const MessageItem = ({
       ]}
     >
       {!isMe && !isDirect && (
-        <Avatar size={30} uri={item?.sender?.avatar} style={styles.messageAvatar} />
+        <Avatar
+          size={30}
+          uri={item?.sender?.avatar}
+          style={styles.messageAvatar}
+        />
       )}
 
       <View
@@ -43,6 +48,15 @@ const MessageItem = ({
           <Typo color={colors.neutral900} fontWeight={"600"} size={13}>
             {item.sender.name}
           </Typo>
+        )}
+
+        {item.attachement && (
+          <Image
+            source={item.attachement}
+            contentFit="cover"
+            style={styles.attachment}
+            transition={100}
+          />
         )}
 
         {item.content && <Typo size={15}>{item.content}</Typo>}
