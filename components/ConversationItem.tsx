@@ -12,11 +12,10 @@ const ConversationItem = ({
   showDivider,
   router,
 }: ConversationListItemProps) => {
-  const openConversation = () => {};
   const { user: currentUser } = useAuth();
 
   const lastMessage: any = item.lastMessage;
-  const isDirect = (item.type == "direct");
+  const isDirect = item.type == "direct";
   let avatar = item.avatar;
   const otherParticipant = isDirect
     ? item.participants.find((p) => p._id != currentUser?.id)
@@ -45,7 +44,20 @@ const ConversationItem = ({
 
     return lastMessage?.attachement ? "Image" : lastMessage.content;
   };
-  
+
+  const openConversation = () => {
+    router.push({
+      pathname:'/(main)/conversation',
+      params:{
+        id:item._id,
+        name:item.name,
+        avatar:item.avatar,
+        type:item.type,
+        participants:JSON.stringify(item.participants)
+      }
+    })
+  };
+
   return (
     <View>
       <TouchableOpacity

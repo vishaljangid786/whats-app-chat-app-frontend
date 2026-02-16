@@ -24,35 +24,31 @@ const home = () => {
   const router = useRouter();
   const [selectedTab, setSelectedTab] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [conversations,setConversations] = useState<ConversationProps[]>([])
+  const [conversations, setConversations] = useState<ConversationProps[]>([]);
 
-  useEffect(() => {
-    testSocket(testSocketCallbackHandler);
-    testSocket(null);
-
-    return () => {
-      testSocket(testSocketCallbackHandler, true);
-    };
-  }, []);
-
-  const processConversations =(res:ResponseProps)=>{
-    // console.log("res:",res);
-    
-    if(res.success){
-      setConversations(res.data)
+  const newConversationHandler = (res: ResponseProps) => {
+    if (res.success && res.data?.isNew) {
+      setConversations((prev) => [...prev, res.data]);
     }
-  }
+  };
+
+  const processConversations = (res: ResponseProps) => {
+    // console.log("res:",res);
+
+    if (res.success) {
+      setConversations(res.data);
+    }
+  };
   useEffect(() => {
-    getConversations(processConversations)
-    getConversations(null)
+    getConversations(processConversations);
+
+    getConversations(newConversationHandler);
+    getConversations(null);
     return () => {
       getConversations(processConversations, true);
+      getConversations(newConversationHandler, true);
     };
   }, []);
-
-  const testSocketCallbackHandler = (data: any) => {
-    console.log("got response from testSocket event:", data);
-  };
 
   const handleLogout = async () => {
     await signOut();
@@ -199,33 +195,36 @@ const home = () => {
             </View>
             {!loading &&
               selectedTab == 0 &&
-              directConversations.length ==
-                0 && (
-                  <Typo style={{ textAlign: "center" }}>
-                    You don't have any messages
-                  </Typo>
-                )}
-            {!loading &&
-              selectedTab == 1 &&
-              groupConversations.length ==
-                0 && (
-                  <Typo style={{ textAlign: "center" }}>
-                    You haven't joined any groups yet
-                  </Typo>
-                )
-              }
+              directConversations.length == 0 && (
+                <Typo style={{ textAlign: "center" }}>
+                  You don't have any messages
+                </Typo>
+              )}
+            {!loading && selectedTab == 1 && groupConversations.length == 0 && (
+              <Typo style={{ textAlign: "center" }}>
+                You haven't joined any groups yet
+              </Typo>
+            )}
 
             {loading && <Loading />}
           </ScrollView>
         </View>
       </View>
 
-
-      <Button style={styles.floatingButton} onPress={()=>router.push({
-        pathname:'/(main)/newConversationModal',
-        params:{isGroup:selectedTab}
-      })}>
-        <Icons.Plus color={colors.black} weight="bold" size={verticalScale(24)} />
+      <Button
+        style={styles.floatingButton}
+        onPress={() =>
+          router.push({
+            pathname: "/(main)/newConversationModal",
+            params: { isGroup: selectedTab },
+          })
+        }
+      >
+        <Icons.Plus
+          color={colors.black}
+          weight="bold"
+          size={verticalScale(24)}
+        />
       </Button>
     </ScreenWrapper>
   );
