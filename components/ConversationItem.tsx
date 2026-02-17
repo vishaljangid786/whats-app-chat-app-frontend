@@ -1,5 +1,5 @@
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import React from "react";
+import { Modal, StyleSheet, TouchableOpacity, View } from "react-native";
+import React, { useState } from "react";
 import { colors, spacingX, spacingY } from "@/constants/theme";
 import Avatar from "./Avatar";
 import Typo from "./Typo";
@@ -7,12 +7,14 @@ import moment from "moment";
 import { ConversationListItemProps } from "@/types";
 import { useAuth } from "@/context/authContext";
 
+
 const ConversationItem = ({
   item,
   showDivider,
   router,
 }: ConversationListItemProps) => {
   const { user: currentUser } = useAuth();
+  const [previewVisible, setPreviewVisible] = useState(false);
 
   const lastMessage: any = item.lastMessage;
   const isDirect = item.type == "direct";
@@ -47,15 +49,15 @@ const ConversationItem = ({
 
   const openConversation = () => {
     router.push({
-      pathname:'/(main)/conversation',
-      params:{
-        id:item._id,
-        name:item.name,
-        avatar:item.avatar,
-        type:item.type,
-        participants:JSON.stringify(item.participants)
-      }
-    })
+      pathname: "/(main)/conversation",
+      params: {
+        id: item._id,
+        name: item.name,
+        avatar: item.avatar,
+        type: item.type,
+        participants: JSON.stringify(item.participants),
+      },
+    });
   };
 
   return (
@@ -64,9 +66,9 @@ const ConversationItem = ({
         onPress={openConversation}
         style={styles.conversationItem}
       >
-        <View>
+        <TouchableOpacity onPress={() => setPreviewVisible(true)}>
           <Avatar uri={avatar} size={47} isGroup={item.type == "group"} />
-        </View>
+        </TouchableOpacity>
 
         <View style={{ flex: 1 }}>
           <View style={styles.row}>
@@ -87,6 +89,25 @@ const ConversationItem = ({
         </View>
       </TouchableOpacity>
       {showDivider && <View style={styles.divider} />}
+      <Modal
+        transparent
+        visible={previewVisible}
+        animationType="fade"
+        onRequestClose={() => setPreviewVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setPreviewVisible(false)}
+        >
+          <View style={styles.previewContainer}>
+            <Avatar uri={avatar} size={150} isGroup={item.type == "group"} />
+            <Typo size={20} fontWeight={"600"} style={{ marginTop: 12 }}>
+              {isDirect ? otherParticipant?.name : item?.name}
+            </Typo>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 };
@@ -100,6 +121,20 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  previewContainer: {
+    backgroundColor: "white",
+    padding: 25,
+    borderRadius: 20,
+    alignItems: "center",
+  },
+
   row: {
     flexDirection: "row",
     alignItems: "center",

@@ -5,22 +5,34 @@ import { verticalScale } from "@/utils/styling";
 import { colors, radius } from "@/constants/theme";
 import { Image } from "expo-image";
 import { getAvatarPath } from "@/services/imageService";
+import * as Icons from "phosphor-react-native";
+import Typo from "./Typo";
 
-const Avatar = ({ uri, size = 40, style, isGroup = false }: AvatarProps) => {
+const Avatar = ({ uri, size = 40, style, isGroup = false ,isEditIcon=false }: AvatarProps) => {
+  const scaledSize = verticalScale(size);
+
   return (
     <View
-      style={[
-        styles.avatar,
-        { height: verticalScale(size), width: verticalScale(size) },
-        style,
-      ]}
+      style={[styles.avatar, { height: scaledSize, width: scaledSize }, style]}
     >
       <Image
         style={{ flex: 1 }}
-        source={getAvatarPath(uri,isGroup)}
+        source={getAvatarPath(uri, isGroup)}
         contentFit="cover"
         transition={100}
       />
+
+      {/* Pencil Overlay (Only for Group Mode) */}
+      {isEditIcon && (
+        <View style={styles.overlay}>
+          <Icons.PencilSimple
+            size={scaledSize * 0.28}
+            color={colors.white}
+            weight="fill"
+          />
+          <Typo color={colors.white}>Edit Image</Typo>
+        </View>
+      )}
     </View>
   );
 };
@@ -37,5 +49,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.neutral100,
     overflow: "hidden",
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    justifyContent: "center",
+    alignItems: "center",
   },
 });

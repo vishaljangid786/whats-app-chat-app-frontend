@@ -1,5 +1,4 @@
 import {
-  Alert,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -7,6 +6,8 @@ import {
   Text,
   TouchableOpacity,
   View,
+  ImageBackground,
+  Modal,
 } from "react-native";
 import React, { useEffect, useState } from "react";
 import ScreenWrapper from "@/components/ScreenWrapper";
@@ -27,6 +28,8 @@ import Loading from "@/components/Loading";
 import { uploadFileToCloudinary } from "@/services/imageService";
 import { getMessages, newMessage } from "@/sockets/socketEvents";
 import { MessageProps, ResponseProps } from "@/types";
+import { showAlert } from "@/utils/globalAlert";
+import bgPattern from "../../assets/images/bgPattern1.png";
 
 const conversation = () => {
   const { user: currentUser } = useAuth();
@@ -40,6 +43,7 @@ const conversation = () => {
   } = useLocalSearchParams();
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<MessageProps[]>([]);
+  const [menuVisible, setMenuVisible] = useState(false);
 
   const [selectedFile, setSelectedFile] = useState<{ uri: string } | null>(
     null,
@@ -48,30 +52,31 @@ const conversation = () => {
 
   useEffect(() => {
     newMessage(newMessageHandler);
-    getMessages(messageHandler)
-    getMessages({conversationId})
+    getMessages(messageHandler);
+    getMessages({ conversationId });
 
     return () => {
       newMessage(newMessageHandler, true);
       getMessages(messageHandler, true);
-
     };
   }, []);
 
-  const messageHandler =  (res:ResponseProps)=>{
-    if(res.success) setMessages(res.data)
-    
-  }
+  const messageHandler = (res: ResponseProps) => {
+    if (res.success) setMessages(res.data);
+  };
 
   const newMessageHandler = (res: ResponseProps) => {
     setLoading(false);
-    
-    if(res.success){
-      if(res.data.conversationId == conversationId){
-        setMessages((prev)=>[res.data as MessageProps, ...prev])
+
+    if (res.success) {
+      if (res.data.conversationId == conversationId) {
+        setMessages((prev) => [res.data as MessageProps, ...prev]);
       }
-    }else{
-      Alert.alert("Error",res.msg)
+    } else {
+      showAlert({
+        title: "Error",
+        message: res.msg as string,
+      });
     }
   };
 
@@ -121,7 +126,10 @@ const conversation = () => {
           attachement = uploadResult.data;
         } else {
           setLoading(false);
-          Alert.alert("Error", "Could not send the image");
+          showAlert({
+            title: "Error",
+            message: "Could not send the message",
+          });
         }
       }
       // console.log("attachement:",attachement);
@@ -141,14 +149,65 @@ const conversation = () => {
       setSelectedFile(null);
     } catch (error) {
       console.log("error sending message:", error);
-      Alert.alert("Error", "Failed to send message");
+      showAlert({
+        title: "Error",
+        message: "Failed to send the message",
+      });
     } finally {
       setLoading(false);
     }
   };
 
+  const threeDotsClick = () => {
+    setMenuVisible(true);
+  };
+
   return (
     <ScreenWrapper showPattern={true} bgOpacity={0.5}>
+      {/* modal for block and upload bg */}
+      <Modal
+        transparent
+        visible={menuVisible}
+        animationType="fade"
+        onRequestClose={() => setMenuVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setMenuVisible(false)}
+        >
+          <View style={styles.menuBox}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                setMenuVisible(false);
+                showAlert({
+                  title: "Oops",
+                  message: "This Feature coming soon!",
+                });
+              }}
+            >
+              <Typo style={styles.menuText}>Upload Background</Typo>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                setMenuVisible(false);
+                showAlert({
+                  title: "Oops",
+                  message: "This Feature coming soon!",
+                });
+              }}
+            >
+              <Text style={[styles.menuText, { color: "red" }]}>
+                Block User
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+      {/* chat view */}
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS == "ios" ? "padding" : "height"}
@@ -170,7 +229,10 @@ const conversation = () => {
             </View>
           }
           rightIcon={
-            <TouchableOpacity style={{ marginBottom: verticalScale(7) }}>
+            <TouchableOpacity
+              style={{ marginBottom: verticalScale(7) }}
+              onPress={threeDotsClick}
+            >
               <Icons.DotsThreeOutlineVertical
                 weight="fill"
                 color={colors.white}
@@ -182,55 +244,69 @@ const conversation = () => {
         {/* messages */}
 
         <View style={styles.content}>
-          <FlatList
-            data={messages}
-            inverted={true}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.messagesContent}
-            renderItem={({ item }) => (
-              <MessageItem item={item} isDirect={isDirect} />
-            )}
-            keyExtractor={(item) => item.id}
-          />
-          {/* footer */}
-          <View style={styles.footer}>
-            <Input
-              placeholder="Type Something...."
-              onChangeText={setMessage}
-              containerStyle={{
-                paddingLeft: spacingX._10,
-                paddingRight: scale(65),
-                borderWidth: 0,
-              }}
-              value={message}
-              icon={
-                <TouchableOpacity style={styles.inputIcon} onPress={onPickFile}>
-                  <Icons.Plus color={colors.black} weight="bold" size={22} />
+          <ImageBackground
+            source={bgPattern}
+            style={{
+              flex: 1,
+              paddingHorizontal: spacingX._15,
+              backgroundColor: colors.white,
+            }}
+            imageStyle={{ opacity: 0.1 }}
+            resizeMode="stretch"
+          >
+            <FlatList
+              data={messages}
+              inverted={true}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.messagesContent}
+              renderItem={({ item }) => (
+                <MessageItem item={item} isDirect={isDirect} />
+              )}
+              keyExtractor={(item) => item.id}
+            />
+            {/* footer */}
+            <View style={styles.footer}>
+              <Input
+                placeholder="Type Something...."
+                onChangeText={setMessage}
+                containerStyle={{
+                  paddingLeft: spacingX._10,
+                  paddingRight: scale(65),
+                  borderWidth: 0,
+                }}
+                value={message}
+                icon={
+                  <TouchableOpacity
+                    style={styles.inputIcon}
+                    onPress={onPickFile}
+                  >
+                    <Icons.Plus color={colors.black} weight="bold" size={22} />
 
-                  {selectedFile && selectedFile.uri && (
-                    <Image
-                      source={selectedFile.uri}
-                      style={styles.selectedFile}
+                    {selectedFile && selectedFile.uri && (
+                      <Image
+                        source={selectedFile.uri}
+                        style={styles.selectedFile}
+                      />
+                    )}
+                  </TouchableOpacity>
+                }
+              />
+
+              <View style={styles.inputRightIcon}>
+                <TouchableOpacity style={styles.inputIcon} onPress={onSend}>
+                  {loading ? (
+                    <Loading size={"small"} color={colors.black} />
+                  ) : (
+                    <Icons.PaperPlaneTilt
+                      color={colors.black}
+                      weight="fill"
+                      size={verticalScale(22)}
                     />
                   )}
                 </TouchableOpacity>
-              }
-            />
-
-            <View style={styles.inputRightIcon}>
-              <TouchableOpacity style={styles.inputIcon} onPress={onSend}>
-                {loading ? (
-                  <Loading size={"small"} color={colors.black} />
-                ) : (
-                  <Icons.PaperPlaneTilt
-                    color={colors.black}
-                    weight="fill"
-                    size={verticalScale(22)}
-                  />
-                )}
-              </TouchableOpacity>
+              </View>
             </View>
-          </View>
+          </ImageBackground>
         </View>
       </KeyboardAvoidingView>
     </ScreenWrapper>
@@ -253,6 +329,32 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacingX._12,
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    justifyContent: "flex-start",
+    alignItems: "flex-end",
+    paddingTop: 90,
+    paddingRight: 20,
+  },
+
+  menuBox: {
+    backgroundColor: "white",
+    borderRadius: 12,
+    width: 180,
+    paddingVertical: 10,
+    elevation: 5,
+  },
+
+  menuItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 15,
+  },
+
+  menuText: {
+    fontSize: 16,
+  },
+
   inputRightIcon: {
     position: "absolute",
     right: scale(10),
@@ -271,12 +373,12 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    backgroundImage: "../../assets/images/bgPattern.png",
     backgroundColor: colors.white,
     borderTopLeftRadius: radius._50,
     borderTopRightRadius: radius._50,
     borderCurve: "continuous",
     overflow: "hidden",
-    paddingHorizontal: spacingX._15,
   },
   inputIcon: {
     backgroundColor: colors.primary,

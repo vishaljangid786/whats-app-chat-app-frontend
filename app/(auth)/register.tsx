@@ -1,11 +1,11 @@
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 import React, { useRef, useState } from "react";
@@ -20,19 +20,38 @@ import { verticalScale } from "@/utils/styling";
 import { useRouter } from "expo-router";
 import Button from "@/components/Button";
 import { useAuth } from "@/context/authContext";
+import { showAlert } from "@/utils/globalAlert";
 
 const Register = () => {
   const nameRef = useRef("");
   const [email, setEmail] = useState("");
   const passwordRef = useRef("");
+  const confirmPasswordRef = useRef("");
+
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
   const { signUp } = useAuth();
 
   const handleSubmit = async () => {
-    if (!nameRef.current || !email || !passwordRef.current) {
-      Alert.alert("Sign Up", "Please fill all the fields");
+    if (
+      !nameRef.current ||
+      !email ||
+      !passwordRef.current ||
+      !confirmPasswordRef.current
+    ) {
+      showAlert({
+        title: "Sign Up",
+        message: "Please fill all the  details",
+      });
+      return;
+    }
+
+    if (passwordRef.current !== confirmPasswordRef.current) {
+      showAlert({
+        title: "Login",
+        message: "Passwords do not match",
+      });
       return;
     }
 
@@ -40,10 +59,19 @@ const Register = () => {
       setIsLoading(true);
       await signUp(email, passwordRef.current, nameRef.current, "");
     } catch (error: any) {
-      Alert.alert("Registration error", error.message);
+      showAlert({
+        title: "Error",
+        message: error.message,
+      });
     } finally {
       setIsLoading(false);
     }
+  };
+  const showAlertBox = () => {
+    showAlert({
+      title: "Oops",
+      message: "This feature coming soon!",
+    });
   };
 
   return (
@@ -56,9 +84,11 @@ const Register = () => {
           <View style={styles.header}>
             <BackButton iconSize={28} />
 
-            <Typo size={17} color={colors.white}>
-              Need some Help?
-            </Typo>
+            <TouchableOpacity onPress={showAlertBox}>
+              <Typo size={17} color={colors.white}>
+                Need some Help?
+              </Typo>
+            </TouchableOpacity>
           </View>
 
           <View style={styles.content}>
@@ -110,10 +140,23 @@ const Register = () => {
 
               <Input
                 placeholder="Enter Your Password"
-                secureTextEntry
+                isPassword
                 onChangeText={(value: string) => (passwordRef.current = value)}
                 icon={
                   <Icons.Lock
+                    size={verticalScale(26)}
+                    color={colors.neutral600}
+                  />
+                }
+              />
+              <Input
+                placeholder="Confirm Password"
+                isPassword
+                onChangeText={(value: string) =>
+                  (confirmPasswordRef.current = value)
+                }
+                icon={
+                  <Icons.CheckCircle
                     size={verticalScale(26)}
                     color={colors.neutral600}
                   />

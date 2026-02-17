@@ -92,6 +92,7 @@ export type AvatarProps = {
   uri: string | null;
   style?: ViewStyle;
   isGroup?: boolean;
+  isEditIcon?:boolean;
 };
 
 export type HeaderProps = {
