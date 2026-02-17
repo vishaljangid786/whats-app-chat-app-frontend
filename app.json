@@ -4,7 +4,7 @@
     "slug": "bubbly-chat-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/splashImage2.png",
+    "icon": "./assets/images/splashimage2.png",
     "scheme": "frontend",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -14,11 +14,12 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/splashImage.png",
+        "foregroundImage": "./assets/images/splashimage.png",
         "monochromeImage": "./assets/images/monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.vishaljangid786.bubblychatapp"
     },
     "web": {
       "output": "static",
@@ -29,7 +30,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splashImage.png",
+          "image": "./assets/images/splashimage.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#E6F4FE",
@@ -42,6 +43,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "e4040326-fdfc-46f0-87cb-5cd77f04c2d1"
+      }
+    },
+    "owner": "vishaljangid786"
   }
 }
