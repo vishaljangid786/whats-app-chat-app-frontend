@@ -3,13 +3,12 @@ import React from "react";
 import { Stack } from "expo-router";
 import { AuthProvider } from "@/context/authContext";
 import GlobalAlert from "@/components/GlobalAlert";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 const StackLayout = () => {
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen
-        name="index"
-      />
+      <Stack.Screen name="index" />
       <Stack.Screen
         name="(main)/newConversationModal"
         options={{ presentation: "modal" }}
@@ -25,8 +24,10 @@ const StackLayout = () => {
 const RootLayout = () => {
   return (
     <AuthProvider>
-      <StackLayout />
-      <GlobalAlert />
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <StackLayout />
+        <GlobalAlert />
+      </GestureHandlerRootView>
     </AuthProvider>
   );
 };

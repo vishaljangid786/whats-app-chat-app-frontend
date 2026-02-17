@@ -1,5 +1,4 @@
 import {
-  Alert,
   Platform,
   ScrollView,
   StyleSheet,
@@ -53,7 +52,10 @@ const ProfileModal = () => {
       updateToken(res.data.token);
       router.back();
     } else {
-      Alert.alert("User", res.msg);
+      showAlert({
+        title: "User",
+        message: res.msg,
+      });
     }
   };
 
@@ -65,11 +67,14 @@ const ProfileModal = () => {
     });
   }, [user]);
 
-  const onSubmit = async() => {
+  const onSubmit = async () => {
     let { name, avatar } = userData;
 
     if (!name.trim()) {
-      Alert.alert("User", "please enter your name");
+      showAlert({
+        title: "User",
+        message: "Please enter your details",
+      });
       return;
     }
 
@@ -78,20 +83,22 @@ const ProfileModal = () => {
       avatar,
     };
 
-    if(avatar && avatar?.uri){
+    if (avatar && avatar?.uri) {
       setLoading(true);
-      const res = await uploadFileToCloudinary(avatar,"profiles")
+      const res = await uploadFileToCloudinary(avatar, "profiles");
       // console.log("result:",res);
-      if(res.success){
+      if (res.success) {
         data.avatar = res.data;
-      }else{
-        Alert.alert("User",res.msg);
-        setLoading(false)
-        return
+      } else {
+        showAlert({
+          title: "User",
+          message: res.msg as string,
+        });
+        setLoading(false);
+        return;
       }
-      
     }
-    
+
     setLoading(true);
 
     updateProfile(data);
@@ -102,31 +109,21 @@ const ProfileModal = () => {
     await signOut();
   };
 
-const showLogOutAlert = () => {
-  if (Platform.OS === "web") {
-    const confirmLogout = window.confirm("Are you sure you want to logout?");
-    if (confirmLogout) {
-      handleLogout();
+  const showLogOutAlert = () => {
+    if (Platform.OS === "web") {
+      const confirmLogout = window.confirm("Are you sure you want to logout?");
+      if (confirmLogout) {
+        handleLogout();
+      }
+    } else {
+
+      showAlert({
+        title: "Logout",
+        message: "Are You Sure to Logout",
+        onConfirm: () => signOut(),
+      });
     }
-  } else {
-    // Alert.alert("Confirm", "Are you sure you want to logout?", [
-    //   {
-    //     text: "Cancel",
-    //     style: "cancel",
-    //   },
-    //   {
-    //     text: "Logout",
-    //     onPress: handleLogout,
-    //     style: "destructive",
-    //   },
-    // ]);
-    showAlert({
-      title:'Logout',
-      message:"Are You Sure to Logout",
-      onConfirm:()=>signOut()
-    })
-  }
-};
+  };
 
   const onPickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -136,8 +133,8 @@ const showLogOutAlert = () => {
       quality: 0.5,
     });
 
-    if(!result.canceled){
-      setUserData({...userData,avatar: result.assets[0]})
+    if (!result.canceled) {
+      setUserData({ ...userData, avatar: result.assets[0] });
     }
   };
 

@@ -11,52 +11,72 @@ import Typo from "@/components/Typo";
 import { colors, radius, spacingX, spacingY } from "@/constants/theme";
 import Button from "@/components/Button";
 import { useAuth } from "@/context/authContext";
-import { getConversations, testSocket } from "@/sockets/socketEvents";
+import {
+  getConversations,
+  newConversation,
+  newMessage,
+  testSocket,
+} from "@/sockets/socketEvents";
 import { verticalScale } from "@/utils/styling";
 import * as Icons from "phosphor-react-native";
 import { useRouter } from "expo-router";
 import ConversationItem from "@/components/ConversationItem";
 import Loading from "@/components/Loading";
 import { ConversationProps, ResponseProps } from "@/types";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import Animated, { runOnJS } from "react-native-reanimated";
 
 const home = () => {
   const { user: currentUser, signOut } = useAuth();
   const router = useRouter();
   const [selectedTab, setSelectedTab] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [conversations,setConversations] = useState<ConversationProps[]>([])
+  const [conversations, setConversations] = useState<ConversationProps[]>([]);
 
-  useEffect(() => {
-    testSocket(testSocketCallbackHandler);
-    testSocket(null);
-
-    return () => {
-      testSocket(testSocketCallbackHandler, true);
-    };
-  }, []);
-
-  const processConversations =(res:ResponseProps)=>{
-    // console.log("res:",res);
-    
-    if(res.success){
-      setConversations(res.data)
+  const newConversationHandler = (res: ResponseProps) => {
+    if (res.success && res.data?.isNew) {
+      setConversations((prev) => [...prev, res.data]);
     }
-  }
+  };
+
+  const processConversations = (res: ResponseProps) => {
+    // console.log("res:",res);
+
+    if (res.success) {
+      setConversations(res.data);
+    }
+  };
+
   useEffect(() => {
-    getConversations(processConversations)
-    getConversations(null)
+    getConversations(processConversations);
+
+    newConversation(newConversationHandler);
+    newMessage(newMessageHandler);
+
+    getConversations(null);
     return () => {
       getConversations(processConversations, true);
+      newConversation(newConversationHandler, true);
+      newMessage(newMessageHandler, true);
     };
   }, []);
 
-  const testSocketCallbackHandler = (data: any) => {
-    console.log("got response from testSocket event:", data);
+  const newMessageHandler = (res: ResponseProps) => {
+    if (res.success) {
+      let conversationId = res.data.conversationId;
+      setConversations((prev) => {
+        let updatedConversation = prev.map((item) => {
+          if (item._id == conversationId) item.lastMessage == res.data;
+          return item;
+        });
+        return updatedConversation;
+      });
+    }
   };
 
-  const handleLogout = async () => {
-    await signOut();
-  };
+  // const handleLogout = async () => {
+  //   await signOut();
+  // };
 
   // const conversations = [
   //   {
@@ -113,9 +133,34 @@ const home = () => {
       return new Date(bDate).getTime() - new Date(aDate).getTime();
     });
 
+  // left right gesture
+
+  const handleSwipeLeft = () => {
+    if (selectedTab === 0) {
+      setSelectedTab(1);
+    }
+  };
+
+  const handleSwipeRight = () => {
+    if (selectedTab === 1) {
+      setSelectedTab(0);
+    }
+  };
+
+  const swipeGesture = Gesture.Pan().onEnd((event) => {
+    if (event.translationX < -50) {
+      runOnJS(handleSwipeLeft)();
+    }
+
+    if (event.translationX > 50) {
+      runOnJS(handleSwipeRight)();
+    }
+  });
+
   return (
     <ScreenWrapper bgOpacity={0.4} showPattern={true}>
       <View style={styles.container}>
+        {/* Top Bar */}
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
             <Typo
@@ -145,87 +190,105 @@ const home = () => {
           </TouchableOpacity>
         </View>
 
+        {/* content */}
         <View style={styles.content}>
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingVertical: spacingY._20 }}
-          >
-            <View style={styles.navBar}>
-              <View style={styles.tabs}>
-                <TouchableOpacity
-                  onPress={() => setSelectedTab(0)}
-                  style={[
-                    styles.tabStyle,
-                    selectedTab === 0 && styles.activeTabStyle,
-                  ]}
-                >
-                  <Typo>Direct Messages</Typo>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => setSelectedTab(1)}
-                  style={[
-                    styles.tabStyle,
-                    selectedTab === 1 && styles.activeTabStyle,
-                  ]}
-                >
-                  <Typo>Groups</Typo>
-                </TouchableOpacity>
-              </View>
-            </View>
+          <GestureDetector gesture={swipeGesture}>
+            <Animated.View style={{ flex: 1 }}>
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingVertical: spacingY._20 }}
+              >
+                {/* menu for direct and group msg */}
+                <View style={styles.navBar}>
+                  <View style={styles.tabs}>
+                    <TouchableOpacity
+                      onPress={() => setSelectedTab(0)}
+                      style={[
+                        styles.tabStyle,
+                        selectedTab === 0 && styles.activeTabStyle,
+                      ]}
+                    >
+                      <Typo>Direct Messages</Typo>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => setSelectedTab(1)}
+                      style={[
+                        styles.tabStyle,
+                        selectedTab === 1 && styles.activeTabStyle,
+                      ]}
+                    >
+                      <Typo>Groups</Typo>
+                    </TouchableOpacity>
+                  </View>
+                </View>
 
-            <View style={styles.conversationList}>
-              {selectedTab == 0 &&
-                directConversations.map((item: ConversationProps, index) => {
-                  return (
-                    <ConversationItem
-                      item={item}
-                      key={index}
-                      router={router}
-                      showDivider={directConversations.length != index + 1}
-                    />
-                  );
-                })}
-              {selectedTab == 1 &&
-                groupConversations.map((item: ConversationProps, index) => {
-                  return (
-                    <ConversationItem
-                      item={item}
-                      key={index}
-                      router={router}
-                      showDivider={groupConversations.length != index + 1}
-                    />
-                  );
-                })}
-            </View>
-            {!loading &&
-              selectedTab == 0 &&
-              directConversations.length ==
-                0 && (
-                  <Typo style={{ textAlign: "center" }}>
-                    You don't have any messages
-                  </Typo>
-                )}
-            {!loading &&
-              selectedTab == 1 &&
-              groupConversations.length ==
-                0 && (
-                  <Typo style={{ textAlign: "center" }}>
-                    You haven't joined any groups yet
-                  </Typo>
-                )
-              }
+                {/* contact list  */}
+                <View style={styles.conversationList}>
+                  {selectedTab == 0 &&
+                    directConversations.map(
+                      (item: ConversationProps, index) => {
+                        return (
+                          <ConversationItem
+                            item={item}
+                            key={index}
+                            router={router}
+                            showDivider={
+                              directConversations.length != index + 1
+                            }
+                          />
+                        );
+                      },
+                    )}
+                  {selectedTab == 1 &&
+                    groupConversations.map((item: ConversationProps, index) => {
+                      return (
+                        <ConversationItem
+                          item={item}
+                          key={index}
+                          router={router}
+                          showDivider={groupConversations.length != index + 1}
+                        />
+                      );
+                    })}
+                </View>
 
-            {loading && <Loading />}
-          </ScrollView>
+                {!loading &&
+                  selectedTab == 0 &&
+                  directConversations.length == 0 && (
+                    <Typo style={{ textAlign: "center" }}>
+                      You don't have any messages
+                    </Typo>
+                  )}
+
+                {!loading &&
+                  selectedTab == 1 &&
+                  groupConversations.length == 0 && (
+                    <Typo style={{ textAlign: "center" }}>
+                      You haven't joined any groups yet
+                    </Typo>
+                  )}
+
+                {loading && <Loading />}
+              </ScrollView>
+            </Animated.View>
+          </GestureDetector>
         </View>
       </View>
 
-
-      <Button style={styles.floatingButton} onPress={()=>router.push({
-        pathname:'/(main)/newConversationModal',
-        params:{isGroup:selectedTab}
-      })}>
-        <Icons.Plus color={colors.black} weight="bold" size={verticalScale(24)} />
+      <Button
+        style={styles.floatingButton}
+        onPress={() =>
+          router.push({
+            pathname: "/(main)/newConversationModal",
+            params: { isGroup: selectedTab },
+          })
+        }
+      >
+        <Icons.Plus
+          color={colors.black}
+          weight="bold"
+          size={verticalScale(24)}
+        />
       </Button>
     </ScreenWrapper>
   );

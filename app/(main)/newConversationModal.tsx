@@ -1,5 +1,4 @@
 import {
-  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -21,6 +20,8 @@ import Button from "@/components/Button";
 import { verticalScale } from "@/utils/styling";
 import { getContacts, newConversation } from "@/sockets/socketEvents";
 import { uploadFileToCloudinary } from "@/services/imageService";
+import { showAlert } from "@/utils/globalAlert";
+import * as Icons from "phosphor-react-native";
 
 const NewConversationModal = () => {
   const { isGroup } = useLocalSearchParams();
@@ -33,7 +34,10 @@ const NewConversationModal = () => {
   const [selectedParticipants, setSelectedParticipants] = useState<string[]>(
     [],
   );
+  const [isSearchActive, setIsSearchActive] = useState(false);
+
   const [isLoading, setIsLoading] = useState(false);
+  const [searchText, setSearchText] = useState("");
 
   const createGroup = async () => {
     if (!groupName.trim() || !currentUser || selectedParticipants.length < 2)
@@ -58,7 +62,10 @@ const NewConversationModal = () => {
       });
     } catch (error: any) {
       console.log("Error creating group:", error);
-      Alert.alert("Error", error.message);
+      showAlert({
+        title: "Error",
+        message: error.message,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -104,7 +111,10 @@ const NewConversationModal = () => {
       });
     } else {
       console.log("Error fetching/creating  conversations:", res.msg);
-      Alert.alert("Error", res.msg);
+      showAlert({
+        title: "Error",
+        message: res.msg,
+      });
     }
   };
 
@@ -132,7 +142,10 @@ const NewConversationModal = () => {
 
   const onSelectUser = (user: any) => {
     if (!currentUser) {
-      Alert.alert("Authentication", "Please login to start the conversation");
+      showAlert({
+        title: "Authentication",
+        message: "Please Login to start the conversation ",
+      });
       return;
     }
 
@@ -145,16 +158,40 @@ const NewConversationModal = () => {
       });
     }
   };
+  const filteredContacts = contacts.filter((user: any) => {
+    if (!searchText.trim()) return true;
+
+    const lowerSearch = searchText.toLowerCase();
+
+    return (
+      user.name?.toLowerCase().includes(lowerSearch) ||
+      user.email?.toLowerCase().includes(lowerSearch)
+    );
+  });
 
   return (
     <ScreenWrapper isModal={true}>
       <View style={styles.container}>
         <Header
+        style={{marginTop:spacingY._15}}
           title={isGroupMode ? "New Group" : "Selected User"}
           leftIcon={<BackButton color={colors.black} />}
+          rightIcon={
+            isGroupMode ? (
+              <TouchableOpacity
+                onPress={() => setIsSearchActive((prev) => !prev)}
+              >
+                {isSearchActive ? (
+                  <Icons.X size={24} color={colors.black} />
+                ) : (
+                  <Icons.MagnifyingGlass size={24} color={colors.black} />
+                )}
+              </TouchableOpacity>
+            ) : null
+          }
         />
 
-        {isGroupMode && (
+        {isGroupMode && !isSearchActive && (
           <View style={styles.groupInforContainer}>
             <View style={styles.avatarContainer}>
               <TouchableOpacity onPress={onPickImage}>
@@ -162,6 +199,7 @@ const NewConversationModal = () => {
                   uri={groupAvatar?.uri || null}
                   size={100}
                   isGroup={true}
+                  isEditIcon={true}
                 />
               </TouchableOpacity>
             </View>
@@ -175,12 +213,21 @@ const NewConversationModal = () => {
             </View>
           </View>
         )}
+        {(!isGroupMode || isSearchActive) && (
+          <View style={styles.searchContainer}>
+            <Input
+              placeholder="Search by name or email"
+              value={searchText}
+              onChangeText={setSearchText}
+            />
+          </View>
+        )}
 
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.conatctList}
         >
-          {contacts?.map((user: any, index) => {
+          {filteredContacts?.map((user: any, index) => {
             const isSelected = selectedParticipants.includes(user.id);
 
             return (
@@ -262,6 +309,10 @@ const styles = StyleSheet.create({
     marginLeft: "auto",
     marginRight: spacingX._10,
   },
+  searchContainer: {
+    marginTop: spacingY._20,
+  },
+
   checkbox: {
     width: 20,
     height: 20,
